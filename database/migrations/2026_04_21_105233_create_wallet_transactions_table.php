@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('wallet_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('wallet_id')->constrained('wallets')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
             $table->integer('amount');
-            $table->enum('type', ['donation', 'deposit']);
-
+            $table->enum('type', ['withdrawal', 'deposit']);
+            $table->enum('status', ['pending', 'completed'])->default('pending');   
             $table->timestamps();
         });
     }

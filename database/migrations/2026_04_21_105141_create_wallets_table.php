@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('project_id')->nullable()->constrained()->onDelete('cascade');
             $table->decimal('balance', 15, 2)->default(0);
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->enum('type', ['withdrawal', 'deposit'])->nullable();
             $table->timestamps();
         });
     }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -41,6 +42,9 @@ class User extends Authenticatable
     }
     public function canCreateProject(){
         return $this->isOrganization()&& optional($this->organization)->status === 'approved';
+    }
+    public function canDonate(){
+        return $this->isUser() && optional($this->wallet)->balance > 0;
     }
 
     /**
@@ -80,6 +84,11 @@ class User extends Authenticatable
     // العلاقة بين اليوزر و التبرعات علاقة واحد لعديد
     public function donations(){
         return $this->hasMany(Donation::class);
+    }
+
+    // العلاقة بين اليوزر و معاملات المحفظة علاقة واحد لعديد
+    public function walletTransactions(){
+        return $this->hasMany(WalletTransaction::class);
     }
  
 }

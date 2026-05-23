@@ -23,30 +23,59 @@ class WalletController extends Controller
 
     
     
-    // public function addFunds(Request $request){
-    //     $request->validate([
-    //         'amount'=>'required|numeric|min:0.01',
-    //     ]);
+    function getBalance(Request $request){
+        $wallet = Wallet::where('user_id', $request->user()->id)->first();
+        if(!$wallet){
+            return response()->json([
+                'message'=>'Wallet not found'
+            ],404);
+        }
+        return response()->json([
+            'balance'=>$wallet->balance
+        ]);
+    }
+    function addFunds(Request $request){
+        $request->validate([
+            'amount'=>'required|numeric|min:1'
+        ]);
 
-    //     $wallet = $request->user()->wallet;
-    //     $wallet->balance += $request->amount;
-    //     $wallet->save();
+        $wallet = Wallet::where('user_id', $request->user()->id)->first();
+        if(!$wallet){
+            return response()->json([
+                'message'=>'Wallet not found'
+            ],404);
+        }
+        $wallet->increment('balance', $request->amount);
 
-    //     return response()->json($wallet);
-    // }
-    // public function deductFunds(Request $request){
-    //     $request->validate([
-    //         'amount'=>'required|numeric|min:0.01',
-    //     ]);
+        return response()->json([
+            'message'=>'Funds added successfully',
+            'balance'=>$wallet->balance
+        ]);
+    }
 
-    //     $wallet = $request->user()->wallet;
-    //     if($wallet->balance < $request->amount){
-    //         return response()->json(['message'=>'Insufficient funds'],400);
-    //     }
-    //     $wallet->balance -= $request->amount;
-    //     $wallet->save();
+    
+    function deductFunds(Request $request){
+        $request->validate([
+            'amount'=>'required|numeric|min:1'
+        ]);
 
-    //     return response()->json($wallet);
-    // }
+        $wallet = Wallet::where('user_id', $request->user()->id)->first();
+        if(!$wallet){
+            return response()->json([
+                'message'=>'Wallet not found'
+            ],404);
+        }
+        if($wallet->balance < $request->amount){
+            return response()->json([
+                'message'=>'Insufficient balance'
+            ],400);
+        }
+        $wallet->decrement('balance', $request->amount);
+
+        return response()->json([
+            'message'=>'Funds deducted successfully',
+            'balance'=>$wallet->balance
+        ]);
+    }
     
 }

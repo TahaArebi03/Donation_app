@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecurringDonationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DonationController;
@@ -41,4 +42,6 @@ Route::get('/user', function (Request $request) {
     Route::post('wallet/deduct-funds',[WalletController::class,'deductFunds'])->middleware('auth:sanctum');
     Route::get('wallet/balance',[WalletController::class,'getBalance'])->middleware('auth:sanctum');
 
+
+    Route::post('recurring-donation/create',[RecurringDonationController::class,'create'])->middleware('auth:sanctum');
 ?>

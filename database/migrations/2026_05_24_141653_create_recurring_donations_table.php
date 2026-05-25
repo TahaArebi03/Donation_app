@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wallet_transactions', function (Blueprint $table) {
+        Schema::create('recurring_donations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('wallet_id')->constrained('wallets')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
             $table->decimal('amount', 15, 2);
-            $table->enum('type', ['withdrawal', 'deposit']);
-            $table->enum('status', ['pending', 'completed'])->default('pending');   
+            $table->enum('frequency', ['daily', 'weekly', 'monthly']);
+            $table->date('next_donation_date');
+            $table->enum('status', ['active', 'cancelled','paused'])->default('active');
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wallet_transactions');
+        Schema::dropIfExists('recurring_donations');
     }
 };

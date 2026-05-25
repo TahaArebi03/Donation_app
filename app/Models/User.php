@@ -85,10 +85,14 @@ class User extends Authenticatable
     public function donations(){
         return $this->hasMany(Donation::class);
     }
+    // العلاقة بين اليوزر و التبرعات المتكررة علاقة واحد لعديد
+    public function recurringDonations(){
+        return $this->hasMany(RecurringDonation::class);
+    }
 
     // العلاقة بين اليوزر و معاملات المحفظة علاقة واحد لعديد
-    public function walletTransactions(){
-        return $this->hasMany(WalletTransaction::class);
-    }
+    // public function walletTransactions(){
+    //     return $this->hasMany(WalletTransaction::class);
+    // }
  
 }

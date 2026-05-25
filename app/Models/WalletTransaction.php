@@ -12,6 +12,7 @@ class WalletTransaction extends Model
         'status',
         'user_id',
         'project_id',
+        'wallet_id',
 
     ];
     public function wallet(){
@@ -20,9 +21,9 @@ class WalletTransaction extends Model
     public function payment(){
         return $this->hasOne(Payment::class);
     }
-    public function user(){
-        return $this->belongsTo(User::class);
-    }
+    // public function user(){
+    //     return $this->belongsTo(User::class);
+    // }
 
 
 }

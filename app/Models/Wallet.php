@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Http\Controllers\WalletController;
-use App\Http\Controllers\WalletTransactionController;
 use Illuminate\Database\Eloquent\Model;
 
 class Wallet extends Model
@@ -25,7 +24,7 @@ class Wallet extends Model
     // توا منطقيا المحفظة عندها اكتر من عملية 
     // ف الكود هدا ايقول عندي علاقة عديدة 
     public function walletTransactions(){
-        return $this->hasMany(WalletTransactionController::class);
+        return $this->hasMany(WalletTransaction::class);
     }
     // علاقة واحد لواحد بين المحفظة و المشروع
     public function project(){

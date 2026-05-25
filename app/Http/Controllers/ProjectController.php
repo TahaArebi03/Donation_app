@@ -73,7 +73,6 @@ class ProjectController extends Controller
                 'title'=>$project->title,
                 'description'=>$project->description,
                 'goal_amount'=>$project->goal_amount,
-                'current_amount'=>$currentAmount,
                 'remaining_amount'=>max(0, $project->goal_amount - $currentAmount),
                 'status'=>$project->status,
             ],

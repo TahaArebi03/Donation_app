@@ -43,4 +43,8 @@ class Project extends Model
     public function donations(){
         return $this->hasMany(Donation::class);
     }
+    // العلاقة بين المشروع و التبرعات المتكررة علاقة عديد لواحد
+    public function recurringDonations(){
+        return $this->hasMany(RecurringDonation::class);
+    }
 }

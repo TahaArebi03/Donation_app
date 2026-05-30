@@ -46,16 +46,17 @@ class UserController extends Controller
                 'organization'=>$user->organization->only('id','name','description','type','status')
             ],201);
         }
-        if($user->isAdmin()) {
-            return response()->json([
-                'message'=>'Admin registered successfully',
-                'user'=>$user->only('id','firstName','lastName','email','role'),
-            ],201);
-        }
+        // if($user->isAdmin()) {
+        //     return response()->json([
+        //         'message'=>'Admin registered successfully',
+        //         'user'=>$user->only('id','firstName','lastName','email','role'),
+        //         'admin'=>$user->admin->only('id','firstName','lastName','email','role'),
+        //     ],201);
+        // }
         $wallet=null;
         if($user->isUser()){
             $wallet=$user->wallet()->create([
-                // هادي ماشي ضرورية لان العلاقة بين اليوزر والواليت هي علاقة واحد لواحد، يعني اليوزر كي يتخلق كيتخلق ليه واليت اوتوماتيكيا، ولكن خليتها باش نوضح الفكرة
+                // هادي ماشي ضرورية لان العلاقة بين اليوزر والواليت هي علاقة واحد لواحد، يعني اليوزر كي يتخلق كيتخلق ليه واليت اوتوماتيكيا，   ولكن خليتها باش نوضح الفكرة
                 // 'user_id'=>$user->id,
                 'balance'=>0,
             ]);
@@ -107,6 +108,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Admin logged in successfully',
                 'user' => $user->only('id', 'firstName', 'lastName', 'email', 'role'),
+                'admin' => $user->admin->only('id','user_id'),
                 'token' => $token
             ], 200);
         }else{

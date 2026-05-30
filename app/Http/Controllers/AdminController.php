@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use App\Models\User;
-
+use App\Models\Donation;
 class AdminController extends Controller
 {
+   
     public function makeAdmin($id)
     {
         $user = User::findOrFail($id);
@@ -18,8 +19,13 @@ class AdminController extends Controller
             ],400);
         }
 
-        $user->makeAdmin();
-
+        // $user->makeAdmin();
+        $user->update([
+            'role'=>'admin'
+        ]);
+        $user->admin()->create([
+            // 'user_id'=>$user->id,  --- IGNORE ---
+        ]);
         return response()->json([
             'message'=>'User promoted to admin successfully',
             'user'=>$user->only('id','firstName','lastName','email','role')
@@ -41,11 +47,44 @@ class AdminController extends Controller
             'organization'=>$organization->only('id','name','description','type','status')
         ],200);
     }
-    public function pendingOrganizations(){
+     public function getUsers()
+    {
+        $users = User::where('role','user')->get(['id','firstName','lastName','email','role']);
+        return response()->json([
+            'message'=>'Users retrieved successfully',
+            'users'=>$users
+        ],200);
+    }
+
+    public function getDonations()
+    {
+        $donations = Donation::with('user:id,firstName,lastName,email')->get(['id','amount','project_id','user_id']);
+        return response()->json([
+            'message'=>'Donations retrieved successfully',
+            'donations'=>$donations
+        ],200);
+    }
+    public function getOrganizationsApproved()
+    {
+        $organizations = Organization::with('user:id,firstName,lastName,email')->where('status', 'approved')->get(['id','name','description','type','status','user_id']);
+        return response()->json([
+            'message'=>'Approved organizations retrieved successfully',
+            'organizations'=>$organizations
+        ],200);
+    }
+    public function getOrganizationsRejected(){
+        $organizations = Organization::where('status','rejected')->get(['id','name','description','type','status']);
+        return response()->json([
+            'message'=>'Rejected organizations retrieved successfully',
+            'organizations'=>$organizations
+        ],200);
+    }
+    public function getOrganizationsPending(){
         $organizations = Organization::where('status','pending')->get(['id','name','description','type','status']);
         return response()->json([
             'message'=>'Pending organizations retrieved successfully',
             'organizations'=>$organizations
         ],200);
     }
+    
 }

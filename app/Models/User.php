@@ -26,11 +26,11 @@ class User extends Authenticatable
     protected $attributes = [
         'role' => 'user',
     ];
-    public function makeAdmin(){
-        $this->update([
-            'role'=>'admin'
-        ]);
-    }
+    // public function makeAdmin(){
+    //     $this->update([
+    //         'role'=>'admin'
+    //     ]);
+    // }
     public function isAdmin(): bool{
         return $this->role === 'admin';
     }
@@ -73,6 +73,11 @@ class User extends Authenticatable
     public function organization(){
         return $this->hasOne(Organization::class);
     }
+    // العلاقة بين اليوزر و الادمن علاقة واحد لواحد
+    public function admin(){
+        return $this->hasOne(Admin::class);
+    }
+
     // العلاقة بين اليوزر و البروفايل علاقة واحد لواحد
     public function profile(){
         return $this->hasOne(Profile::class);

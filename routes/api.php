@@ -21,13 +21,23 @@ Route::get('/user', function (Request $request) {
     Route::post('logout',[UserController::class,'logout'])->middleware('auth:sanctum');
 
 
-    Route::post('organizations',[OrganizationController::class,'store'])->middleware('auth:sanctum');
+    Route::post('organizations/create',[OrganizationController::class,'create'])->middleware('auth:sanctum');
 
 
-    Route::get('admin/organizations/pending',[AdminController::class,'pendingOrganizations'])->middleware('auth:sanctum','admin');
-    Route::post('admin/organizations/{id}/approve',[AdminController::class,'approveOrganization'])->middleware('auth:sanctum','admin');
-    Route::post('admin/organizations/{id}/reject',[AdminController::class,'rejectOrganization'])->middleware('auth:sanctum','admin');
-    Route::post('admin/users/{id}/make-admin',[AdminController::class,'makeAdmin'])->middleware('auth:sanctum','admin');
+
+
+    Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::get('/admin/organizations/approved', [AdminController::class, 'getOrganizationsApproved']);
+    Route::get('/admin/donations', [AdminController::class, 'getDonations']);
+    Route::get('/admin/organizations/rejected', [AdminController::class, 'getOrganizationsRejected']);
+    Route::get('/admin/organizations/pending', [AdminController::class, 'getOrganizationsPending']);
+    Route::post('/admin/organizations/{id}/approve', [AdminController::class, 'approveOrganization']);
+    Route::post('/admin/organizations/{id}/reject', [AdminController::class, 'rejectOrganization']);
+    Route::post('/admin/users/{id}/make-admin', [AdminController::class, 'makeAdmin']);
+    
+});
+    
 
 
     Route::post('create-project',[ProjectController::class,'create'])->middleware('auth:sanctum');

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('description');
             $table->enum('type', ['active', 'charity']);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            
+            $table->string('document_path');
             $table->timestamps();
         });
     }

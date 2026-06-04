@@ -35,7 +35,7 @@ Route::get('/user', function (Request $request) {
     Route::post('/admin/organizations/{id}/approve', [AdminController::class, 'approveOrganization']);
     Route::post('/admin/organizations/{id}/reject', [AdminController::class, 'rejectOrganization']);
     Route::post('/admin/users/{id}/make-admin', [AdminController::class, 'makeAdmin']);
-    
+    Route::post('/admin/logout', [AdminController::class, 'logout']);
 });
     
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Organization extends Model
 {
-    protected $fillable = ['name', 'description', 'type', 'status'];
+    protected $fillable = ['name', 'description', 'type', 'status', 'document_path'];
 
 
     public function isApproved(){

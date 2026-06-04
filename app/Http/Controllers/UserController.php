@@ -21,8 +21,10 @@ class UserController extends Controller
 
             'name'=>'required_if:role,organization|string|max:255',
             'description'=>'required_if:role,organization|string|max:255',
-            'type'=>'required_if:role,organization|in:activist,charity',
+            'type'=>'required_if:role,organization|in:active,charity',
             'status'=>'string|in:pending,approved,rejected',
+            'document_path' => 'required_if:role,organization|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            
         ]);
         $user=User::create([
             'firstName'=>$request->firstName,
@@ -34,12 +36,20 @@ class UserController extends Controller
         
        
         if($user->isOrganization()) {
-           $user->organization()->create([
-                'name'=>$request->name,
-                'description'=>$request->description,
-                'type'=>$request->type,
-                'status'=>'pending'
-                ]);
+            $image_path = null;
+
+            if ($request->hasFile('document_path')) {
+                $image_path = $request->file('document_path')->store('organization_documents', 'public');
+            }
+
+            $user->organization()->create([
+                'name' => $request->name,
+                'description' => $request->description,
+                'type' => $request->type,
+                'document_path' => $image_path,
+                'status' => 'pending',
+            ]);
+            
             return response()->json([
                 'message'=>'Organization registered successfully, pending approval',
                 'user'=>$user->only('id','firstName','lastName','email','role'),

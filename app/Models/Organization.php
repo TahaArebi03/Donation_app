@@ -32,8 +32,9 @@ class Organization extends Model
     public function projects(){
         return $this->hasMany(Project::class);
     }
-        // العلاقة بين المنظمة و الأعضاء علاقة عديد لواحد
-    public function members(){
-        return $this->hasMany(Profile::class);
-    }
+        // العلاقة بين المنظمة و الأعضاء علاقة عديد لعديد
+    public function members() {
+        // members اسم الجدول
+    return $this->belongsToMany(User::class, 'members')->withTimestamps();
+}
 }

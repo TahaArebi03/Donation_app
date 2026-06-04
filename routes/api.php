@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\MemberController;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -36,7 +37,16 @@ Route::get('/user', function (Request $request) {
     Route::post('/admin/organizations/{id}/reject', [AdminController::class, 'rejectOrganization']);
     Route::post('/admin/users/{id}/make-admin', [AdminController::class, 'makeAdmin']);
     Route::post('/admin/logout', [AdminController::class, 'logout']);
-});
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/member/search', [MemberController::class, 'searchUser']);
+        Route::post('/member/add', [MemberController::class, 'addMember']);
+        Route::get('/member/list_members', [MemberController::class, 'listMembers']);
+        Route::get('/member/list_organizations_for_user', [MemberController::class, 'listOrganizationsForUser']);
+        Route::post('/member/remove', [MemberController::class, 'removeMember']);
+        Route::post('/member/update-role', [MemberController::class, 'updateMemberRole']); 
+    });
     
 
 

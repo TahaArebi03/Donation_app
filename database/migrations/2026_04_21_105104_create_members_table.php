@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->enum('role', ['admin', 'member'])->default('member');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('role_in_org', ['متطوع', 'مسعف','منسق',])->default('متطوع');
             $table->timestamps();
         });
     }

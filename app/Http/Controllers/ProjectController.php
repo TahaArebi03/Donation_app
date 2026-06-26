@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Organization;
 use App\Models\Project;
 use Illuminate\Http\Request;
 
@@ -80,11 +81,36 @@ class ProjectController extends Controller
         );
         
     }           
-    public function getProjects()
+    public function getProjectsForUser()
     {
         // Logic to list all projects
         $projects = Project::with('images')->get();
         return response()->json($projects);
+    }
+    public function getProjectsForOrganization(Request $request)
+    {
+        $user = $request->user();
+        if(!$user->isOrganization()){
+            return response()->json([
+                'message'=>'Unauthorized to view projects'
+                ],403);
+        }
+        // Logic to list all projects for the organization
+        $projects = Project::with('images')->where('organization_id', $user->organization->id)->get();
+        return response()->json($projects);
+    }
+    public function getProjectsForMember(Request $request, $organizationId)
+    {
+        $user = $request->user();
+        $organization = Organization::findOrFail($organizationId);
+
+        // تحقق من أن المستخدم عضو في الجمعية
+        if (!$organization->members()->where('user_id', $user->id)->exists()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $projects = Project::where('organization_id', $organizationId)->get();
+        return response()->json(['projects' => $projects]);
     }
     // public function update(Request $request, Project $project)
     // {

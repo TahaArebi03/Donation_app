@@ -6,35 +6,50 @@ use Illuminate\Database\Eloquent\Model;
 
 class Organization extends Model
 {
-    protected $fillable = ['name', 'description', 'type', 'status', 'document_path'];
+    protected $fillable = [
+        'name',
+        'description',
+        'type',
+        'status',
+        'document_path',
+        'owner_id', // مهم جداً
+    ];
 
-
-    public function isApproved(){
+    // ===== دوال الحالة =====
+    public function isApproved()
+    {
         return $this->status === 'approved';
     }
 
-    public function isPending(){
+    public function isPending()
+    {
         return $this->status === 'pending';
     }
-    public function isRejected(){
+
+    public function isRejected()
+    {
         return $this->status === 'rejected';
-    }   
-
-    
-
-
-
-        // العلاقة بين اليوزر و المنظمة علاقة واحد لواحد
-    public function user(){
-        return $this->belongsTo(User::class);
     }
-     // العلاقة بين المنظمة و المشاريع علاقة عديد لواحد 
-    public function projects(){
+
+    // ===== العلاقات =====
+
+    // المالك (المدير الأساسي)
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    // الأعضاء المضافين (عبر جدول organization_users)
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'organization_users')
+                    ->withPivot('role', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    // المشاريع التابعة للمنظمة
+    public function projects()
+    {
         return $this->hasMany(Project::class);
     }
-        // العلاقة بين المنظمة و الأعضاء علاقة عديد لعديد
-    public function members() {
-        // members اسم الجدول
-    return $this->belongsToMany(User::class, 'members')->withTimestamps();
-}
 }

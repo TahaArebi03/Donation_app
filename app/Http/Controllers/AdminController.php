@@ -66,7 +66,7 @@ class AdminController extends Controller
     }
     public function getOrganizationsApproved()
     {
-        $organizations = Organization::with('user:id,firstName,lastName,email')->where('status', 'approved')->get(['id','name','description','type','status','user_id']);
+        $organizations = Organization::with('owner:id,firstName,lastName,email')->where('status', 'approved')->get(['id','name','description','type','status','owner_id']);
         return response()->json([
             'message'=>'Approved organizations retrieved successfully',
             'organizations'=>$organizations

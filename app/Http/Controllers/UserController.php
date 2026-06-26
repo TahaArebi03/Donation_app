@@ -10,6 +10,13 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+    // جلب المستخدمين الي مش ادمن ومش جمعية
+    public function getUsers()
+{
+    $users = User::where('role', 'user')->get(['id', 'firstName', 'lastName', 'email']);
+    return response()->json($users); // يعيد مصفوفة مباشرة
+}
+    
     public function register(Request $request){
         $request->validate([
             'firstName'=>'required|string|max:255',

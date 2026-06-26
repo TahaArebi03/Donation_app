@@ -4,7 +4,6 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,10 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable,HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens;
 
-    
     protected $fillable = [
         'firstName',
         'lastName',
@@ -23,45 +20,16 @@ class User extends Authenticatable
         'password',
         'role',
     ];
+
     protected $attributes = [
         'role' => 'user',
     ];
-    // public function makeAdmin(){
-    //     $this->update([
-    //         'role'=>'admin'
-    //     ]);
-    // }
-    public function isAdmin(): bool{
-        return $this->role === 'admin';
-    }
-    public function isOrganization(): bool{
-        return $this->role === 'organization';
-    }
-    public function isUser(): bool{
-        return $this->role === 'user';
-    }
-    public function canCreateProject(){
-        return $this->isOrganization()&& optional($this->organization)->status === 'approved';
-    }
-    public function canDonate(){
-        return $this->isUser() && optional($this->wallet)->balance > 0;
-    }
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -69,39 +37,80 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    // العلاقة بين اليوزر و المنظمة علاقة واحد لواحد
-    public function organization(){
-        return $this->hasOne(Organization::class);
+
+    // ===== دوال التحقق من الصلاحيات =====
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
-    // العلاقة بين اليوزر و الادمن علاقة واحد لواحد
-    public function admin(){
+
+    public function isOrganization(): bool
+    {
+        return $this->role === 'organization';
+    }
+
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
+    }
+
+    public function canCreateProject()
+    {
+        // هذه الدالة تحتاج إلى العلاقة organization() (المعرفة أدناه)
+        return $this->isOrganization() && optional($this->organization)->status === 'approved';
+    }
+
+    public function canDonate()
+    {
+        return $this->isUser() && optional($this->wallet)->balance > 0;
+    }
+
+    // ===== العلاقات =====
+
+    // المنظمة التي يملكها المستخدم (كمدير)
+    public function organization()
+    {
+        return $this->hasOne(Organization::class, 'owner_id');
+    }
+
+
+    // المنظمات التي انضم إليها كعضو (عبر الجدول الوسيط organization_users)
+    public function organizations()
+    {
+        return $this->belongsToMany(Organization::class, 'organization_users')
+                    ->withPivot('role', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    // باقي العلاقات الأخرى (profile, wallet, donations, etc.)
+    public function admin()
+    {
         return $this->hasOne(Admin::class);
     }
 
-    // العلاقة بين اليوزر و البروفايل علاقة واحد لواحد
-    public function profile(){
+    public function profile()
+    {
         return $this->hasOne(Profile::class);
     }
-    // العلاقة بين اليوزر و المحفظة علاقة واحد لواحد
-    public function wallet(){
+
+    public function wallet()
+    {
         return $this->hasOne(Wallet::class);
     }
-    // العلاقة بين اليوزر و التبرعات علاقة واحد لعديد
-    public function donations(){
+
+    public function donations()
+    {
         return $this->hasMany(Donation::class);
     }
-    // العلاقة بين اليوزر و التبرعات المتكررة علاقة واحد لعديد
-    public function recurringDonations(){
+
+    public function recurringDonations()
+    {
         return $this->hasMany(RecurringDonation::class);
     }
-    // العلاقة بين اليوزر و المنظمات التطوعية علاقة عديد لعديد
-    public function volunteerOrganizations(){
-        // members اسم الجدول 
-        return $this->belongsToMany(Organization::class,'members')->withTimestamps();
-    }
-    // العلاقة بين اليوزر و معاملات المحفظة علاقة واحد لعديد
-    // public function walletTransactions(){
-    //     return $this->hasMany(WalletTransaction::class);
+
+    // إذا كنت تستخدم جدول 'members' للتطوع فاحتفظ به، وإلا يمكنك حذفه
+    // public function volunteerOrganizations()
+    // {
+    //     return $this->belongsToMany(Organization::class, 'members')->withTimestamps();
     // }
- 
 }

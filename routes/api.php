@@ -51,7 +51,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // مشاريع جمعية معينة (للأعضاء)
     Route::get('/organizations/{organization}/projects', [ProjectController::class, 'getProjectsForMember']);
+    // جلب الأعضاء لجمعية معينة
+    Route::get('/organizations/{organization}/members', [OrganizationUserController::class, 'getMembersForMember']);
+    // جلب جميع الجمعيات المقبولة (مع حالة العضوية)
+    Route::get('/organizations/all', [OrganizationController::class, 'getAllOrganizations']);
 
+    // الانضمام لجمعية
+    Route::post('/organizations/{id}/join', [OrganizationUserController::class, 'joinOrganization']);
     // ===== التبرعات والمحفظة =====
     Route::post('donate/create', [DonationController::class, 'create']);
     Route::post('wallet/add-funds', [WalletController::class, 'addFunds']);

@@ -130,4 +130,46 @@ class OrganizationUserController extends Controller
                 ->get();
     return response()->json(['users' => $users]);
 }
+public function getMembersForMember(Request $request, $organizationId)
+{
+    $user = $request->user();
+    $organization = Organization::findOrFail($organizationId);
+
+    // تحقق من أن المستخدم عضو في هذه الجمعية
+    $isMember = $organization->members()->where('user_id', $user->id)->exists();
+    if (!$isMember) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $members = $organization->members()->get();
+    return response()->json(['members' => $members]);
+}
+public function joinOrganization(Request $request, $organizationId)
+{
+    $user = $request->user();
+    $organization = Organization::findOrFail($organizationId);
+    
+    // التحقق من أن الجمعية مقبولة
+    if ($organization->status !== 'approved') {
+        return response()->json(['error' => 'Organization is not available for joining'], 400);
+    }
+    
+    // التحقق من أن المستخدم ليس مالك الجمعية
+    if ($user->id == $organization->owner_id) {
+        return response()->json(['error' => 'You are the owner of this organization'], 400);
+    }
+    
+    // التحقق من أن المستخدم ليس عضواً بالفعل
+    if ($organization->members()->where('user_id', $user->id)->exists()) {
+        return response()->json(['error' => 'Already a member'], 400);
+    }
+    
+    // إضافة العضو
+    $organization->members()->attach($user->id, [
+        'role' => 'عضو',
+        'joined_at' => now(),
+    ]);
+    
+    return response()->json(['message' => 'Joined successfully']);
+}
 }

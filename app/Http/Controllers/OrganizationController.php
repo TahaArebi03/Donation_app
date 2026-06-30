@@ -32,6 +32,20 @@ class OrganizationController extends Controller
             'updated_at' => $organization->updated_at,
         ]);
     }
+    public function getAllOrganizations(Request $request)
+    {
+        $user = $request->user();
+        
+        // جلب جميع الجمعيات المقبولة
+        $organizations = Organization::where('status', 'approved')->get();
+        
+        // إضافة حالة العضوية لكل جمعية
+        $organizations->each(function ($org) use ($user) {
+            $org->is_member = $org->members()->where('user_id', $user->id)->exists();
+        });
+        
+        return response()->json(['organizations' => $organizations]);
+    }
     
     
 

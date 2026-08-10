@@ -22,7 +22,7 @@ return new class extends Migration
             // حالة العضوية (معلق، مقبول، مرفوض)
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             // دوره داخل هذه المنظمة (عضو عادي أو مشرف)
-            $table->enum('role', ['عضو', 'مشرف',"مدير مالي"])->default('عضو');
+            $table->string('role', 20)->default('member');
             
             // تاريخ الانضمام
             $table->timestamp('joined_at')->useCurrent();

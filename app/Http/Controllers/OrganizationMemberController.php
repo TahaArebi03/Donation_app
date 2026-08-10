@@ -25,6 +25,10 @@ class OrganizationMemberController extends Controller
         if (!$organization) {
             return response()->json(['error' => 'User does not own any organization'], 403);
         }
+        $allowedRoles = ['member', 'admin', 'finance_manager'];
+        if (!in_array($request->role, $allowedRoles)) {
+            return response()->json(['error' => 'دور غير صالح'], 400);
+        }
 
         $newMember = User::findOrFail($request->user_id);
 
@@ -41,11 +45,14 @@ class OrganizationMemberController extends Controller
         // إضافة العضو
         $organization->members()->attach($newMember->id, [
             'role' => $request->role,
-            'status' => 'active',
+            'status' => 'approved',
             'joined_at' => now(),
         ]);
 
-        return response()->json(['message' => 'Member added successfully']);
+        return response()->json([
+    'message' => 'تمت الإضافة بنجاح',
+    'member' => $newMember, // أو بيانات العضو مع دوره
+]);
     }
     public function removeMember(Request $request)
     {
@@ -72,7 +79,10 @@ class OrganizationMemberController extends Controller
 
         $organization->members()->detach($member->id);
 
-        return response()->json(['message' => 'Member removed successfully']);
+        return response()->json([
+            'message' => 'Member removed successfully',
+            'member' => $member
+        ]);
     }
 
     public function updateMemberRole(Request $request)
@@ -99,7 +109,10 @@ class OrganizationMemberController extends Controller
             'role' => $request->role,
         ]);
 
-        return response()->json(['message' => 'Role updated successfully']);
+        return response()->json([
+            'message' => 'Role updated successfully',
+            'member' => $member
+        ]);
     }
     public function listMembers(Request $request)
     {

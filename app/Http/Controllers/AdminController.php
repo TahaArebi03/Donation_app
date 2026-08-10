@@ -31,6 +31,15 @@ class AdminController extends Controller
             'user'=>$user->only('id','firstName','lastName','email','role')
         ],200);
     }
+    public function pendingOrganization(Request $request , $id){
+        
+        $organization = Organization::findOrFail($id);
+        $organization->update(['status'=>'pending']);
+        return response()->json([
+            'message'=>'Organization is pending',
+            'organization'=>$organization->only('id','name','description','type','status')
+        ],200);
+    }
     public function approveOrganization(Request $request, $id){
         $organization = Organization::findOrFail($id);
         $organization->update(['status'=>'approved']);
@@ -92,6 +101,44 @@ class AdminController extends Controller
         return response()->json([
             'message'=>'Logged out successfully'
         ],200);
+    }
+    public function getOrganizationDetails($id)
+    {
+        // name, description, type, status, owner (id, firstName, lastName, email)
+        
+        $organization = Organization::with('owner:id,firstName,lastName,email')->get(['id','name','description','type','status','owner_id'])->findOrFail($id);
+        return response()->json([
+            'message'=>'Organization details retrieved successfully',
+            'organization'=>$organization
+        ],200);
+    }
+    // deleteOrganization
+    public function deleteOrganization($id)
+    {
+        $organization = Organization::findOrFail($id);
+        $organization->delete();
+        return response()->json([
+            'message'=>'Organization deleted successfully'
+        ],200);
+    }
+    // getUserDetails
+    public function getUserDetails($id)
+    {
+        $user = User::findOrFail($id);
+        return response()->json([
+            'message'=>'User details retrieved successfully',
+            'user'=>$user->only('id','firstName','lastName','email','role')
+        ],200);
+    }
+    // deleteUser
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        return response()->json([
+            'message'=>'User deleted successfully'
+        ],200);
+    
     }
     
 }

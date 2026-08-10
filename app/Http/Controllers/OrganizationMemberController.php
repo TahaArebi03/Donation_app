@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\OrganizationMember;
 
 use Illuminate\Http\Request;
 
-class OrganizationUserController extends Controller
+class OrganizationMemberController extends Controller
 {
     
 
@@ -40,6 +41,7 @@ class OrganizationUserController extends Controller
         // إضافة العضو
         $organization->members()->attach($newMember->id, [
             'role' => $request->role,
+            'status' => 'active',
             'joined_at' => now(),
         ]);
 
@@ -101,25 +103,33 @@ class OrganizationUserController extends Controller
     }
     public function listMembers(Request $request)
     {
-        $user = $request->user();
-        $organization = $user->organization;
+        $organizationId = $request->organization_id;
+
+        $organization = Organization::find($organizationId);
 
         if (!$organization) {
-            return response()->json(['error' => 'Organization not found'], 404);
+            return response()->json([
+                'error' => 'Organization not found'
+            ], 404);
         }
 
         $members = $organization->members()->get();
-        return response()->json(['members' => $members]);
-    }
-    public function listOrganizationsForUser(Request $request)
-    {
-        $user = $request->user();
 
-        // جلب جميع المنظمات التي انضم إليها المستخدم
-        $organizations = $user->organizations()->get();
-
-        return response()->json(['organizations' => $organizations]);
+        return response()->json([
+            'members' => $members
+        ]);
     }
+    public function listOrganizationForMember(Request $request)
+{
+    $user = $request->user();
+
+    // جلب الجمعيات التي انضم إليها المستخدم وتأكد أن حالته فيها active (مقبول)
+    $organizations = $user->organizations()
+                          ->wherePivot('status', 'active')
+                          ->get();
+
+    return response()->json(['organizations' => $organizations]);
+}
     public function searchUser(Request $request)
 {
     $query = $request->input('query'); // بدلاً من 'email'
@@ -129,6 +139,12 @@ class OrganizationUserController extends Controller
                 ->limit(10)
                 ->get();
     return response()->json(['users' => $users]);
+}
+public function getMembersForPublic($organizationId)
+{
+    $organization = Organization::findOrFail($organizationId);
+    $members = $organization->members()->get();
+    return response()->json(['members' => $members]);
 }
 public function getMembersForMember(Request $request, $organizationId)
 {
@@ -144,32 +160,32 @@ public function getMembersForMember(Request $request, $organizationId)
     $members = $organization->members()->get();
     return response()->json(['members' => $members]);
 }
-public function joinOrganization(Request $request, $organizationId)
+public function volunteerRequest(Request $request, $organizationId)
 {
     $user = $request->user();
     $organization = Organization::findOrFail($organizationId);
-    
-    // التحقق من أن الجمعية مقبولة
-    if ($organization->status !== 'approved') {
-        return response()->json(['error' => 'Organization is not available for joining'], 400);
-    }
-    
-    // التحقق من أن المستخدم ليس مالك الجمعية
-    if ($user->id == $organization->owner_id) {
-        return response()->json(['error' => 'You are the owner of this organization'], 400);
-    }
-    
-    // التحقق من أن المستخدم ليس عضواً بالفعل
-    if ($organization->members()->where('user_id', $user->id)->exists()) {
+
+    // تحقق من أنه ليس عضواً فعالاً بالفعل
+    $existing = $organization->members()->where('user_id', $user->id)->first();
+    if ($existing && $existing->pivot->status == 'active') {
         return response()->json(['error' => 'Already a member'], 400);
     }
-    
-    // إضافة العضو
-    $organization->members()->attach($user->id, [
-        'role' => 'عضو',
-        'joined_at' => now(),
+
+    // إذا كان هناك طلب pending مسبقاً
+    if ($existing && $existing->pivot->status == 'pending') {
+        return response()->json(['error' => 'Request already pending'], 400);
+    }
+
+    // إضافة أو تحديث الطلب
+    $organization->members()->syncWithoutDetaching([
+        $user->id => [
+            'role' => 'عضو',
+            'status' => 'pending',
+            'joined_at' => now(),
+        ]
     ]);
-    
-    return response()->json(['message' => 'Joined successfully']);
+
+    return response()->json(['message' => 'Volunteer request sent successfully']);
 }
+
 }

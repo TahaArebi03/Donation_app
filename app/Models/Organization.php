@@ -38,12 +38,24 @@ class Organization extends Model
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
+    // المستخدمين الذين يتابعون هذه الجمعية (للإحصائيات فقط، لا نعرضها)
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'user_organization_follows')
+                    ->withPivot('followed_at')
+                    ->withTimestamps();
+    }
 
-    // الأعضاء المضافين (عبر جدول organization_users)
+    // للحصول على عدد المتابعين فقط (بدون عرض أسمائهم)
+    public function followersCount()
+    {
+        return $this->followers()->count();
+    }
+    // الأعضاء المضافين (عبر جدول organization_members)
     public function members()
     {
-        return $this->belongsToMany(User::class, 'organization_users')
-                    ->withPivot('role', 'joined_at')
+        return $this->belongsToMany(User::class, 'organization_members')
+                    ->withPivot('role', 'joined_at', 'status')
                     ->withTimestamps();
     }
 

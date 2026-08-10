@@ -22,8 +22,8 @@ class ProjectController extends Controller
             'description' => 'required|string',
             'goal_amount' => 'required|numeric|min:0',
             'status' => 'nullable|in:active,completed,cancelled',
-            'images' => 'required|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            // 'images' => 'required|array',
+            // 'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]); 
 
         $project = Project::create([
@@ -38,12 +38,12 @@ class ProjectController extends Controller
             ]);
         
         
-        if($request->has('images')){
-            foreach($request->file('images') as $image){
-                $path = $image->store('project_images', 'public');
-                $project->images()->create(['image_path'=>$path]);
-            }
-        }
+        // if($request->has('images')){
+        //     foreach($request->file('images') as $image){
+        //         $path = $image->store('project_images', 'public');
+        //         $project->images()->create(['image_path'=>$path]);
+        //     }
+        // }
         
         // انشاء محفظة للمشروع
         if($project->isActive()){
@@ -60,71 +60,103 @@ class ProjectController extends Controller
         ],
             201);
     }
-    public function show(Project $project)
+    public function show($id)
+{
+    $project = Project::findOrFail($id);
+    $currentAmount = $project->wallet->balance ?? 0;
+
+    return response()->json([
+        'project' => [
+            'id' => $project->id,
+            'title' => $project->title,
+            'description' => $project->description,
+            'goal_amount' => $project->goal_amount,
+            'donated_amount' => $currentAmount, // 💡 مهم جداً لشاشة فلاتر لكي لا تظهر $0
+            'remaining_amount' => max(0, $project->goal_amount - $currentAmount),
+            'status' => $project->status,
+        ],
+    ]);
+}           
+    public function getProjectsForOrganization(Request $request, $id)
     {
-        // Logic to show a single project
-        $currentAmount = $project->wallet->balance ?? 0;
-        // تحديث حالة المشروع إذا تم الوصول إلى الهدف  المفروض في التبرع انديره
-        // if($project->goal_amount==$currentAmount){
-        //     $project->update(['status'=>'completed']);
-        // }
+        // 1. جلب مشاريع الجمعية بناءً على الـ id المبعوث في كل الأحوال
+        $projects = Project::with(['images', 'wallet'])
+            ->where('organization_id', $id)
+            ->get();
+
+        // 2. عمل الحسابات المالية الموحدة (التي تظهر للمدير والمتبرع على حد سواء)
+        $projects->each(function ($project) {
+            $donated = $project->wallet->balance ?? 0;
+            $project->donated_amount = $donated;
+            $project->remaining_amount = max(0, $project->goal_amount - $donated);
+        });
+
+        return response()->json($projects);
+    }
+
+    public function getAllProjects()
+    {
+        // جلب كل المشاريع في النظام مع الصور والمحفظة والجمعية التابع لها المشروع
+        $projects = Project::with(['images', 'wallet', 'organization'])->get();
+
+        // حساب المبالغ المالية لكل مشروع في النظام
+        $projects->each(function ($project) {
+            $donated = $project->wallet->balance ?? 0;
+            $project->donated_amount = $donated;
+            $project->remaining_amount = max(0, $project->goal_amount - $donated);
+        });
+
+        return response()->json($projects);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $project = Project::findOrFail($id);
+        $user = $request->user();
+
+        // الأمن: التأكد من أن المدير يملك هذا المشروع عبر الجمعية الخاصة به
+        if (!$user->isOrganization() || $project->organization_id !== $user->organization->id) {
+            return response()->json(['message' => 'Unauthorized to update this project'], 403);
+        }
+
+        // التحقق من المدخلات الجديدة
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'goal_amount' => 'required|numeric|min:0',
+            'status' => 'nullable|in:active,completed,cancelled',
+        ]);
+
+        // تحديث البيانات في قاعدة البيانات
+        $project->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'goal_amount' => $request->goal_amount,
+            'status' => $request->status ?? $project->status,
+        ]);
+
         return response()->json([
-            'project'=>[
-                'id'=>$project->id,
-                'title'=>$project->title,
-                'description'=>$project->description,
-                'goal_amount'=>$project->goal_amount,
-                'remaining_amount'=>max(0, $project->goal_amount - $currentAmount),
-                'status'=>$project->status,
-            ],
-        ]
-        );
-        
-    }           
-    public function getProjectsForUser()
-    {
-        // Logic to list all projects
-        $projects = Project::with('images')->get();
-        return response()->json($projects);
+            'message' => 'Project updated successfully',
+            'project' => $project->only('id', 'title', 'description', 'goal_amount', 'status')
+        ], 200);
     }
-    public function getProjectsForOrganization(Request $request)
+    public function delete(Request $request, $id)
     {
+        $project = Project::findOrFail($id);
         $user = $request->user();
-        if(!$user->isOrganization()){
-            return response()->json([
-                'message'=>'Unauthorized to view projects'
-                ],403);
-        }
-        // Logic to list all projects for the organization
-        $projects = Project::with('images')->where('organization_id', $user->organization->id)->get();
-        return response()->json($projects);
-    }
-    public function getProjectsForMember(Request $request, $organizationId)
-    {
-        $user = $request->user();
-        $organization = Organization::findOrFail($organizationId);
 
-        // تحقق من أن المستخدم عضو في الجمعية
-        if (!$organization->members()->where('user_id', $user->id)->exists()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        // الأمن: التأكد من أن المدير يملك هذا المشروع عبر الجمعية الخاصة به
+        if (!$user->isOrganization() || $project->organization_id !== $user->organization->id) {
+            return response()->json(['message' => 'Unauthorized to delete this project'], 403);
         }
 
-        $projects = Project::where('organization_id', $organizationId)->get();
-        return response()->json(['projects' => $projects]);
+        // حذف المشروع
+        $project->delete();
+
+        return response()->json([
+            'message' => 'Project deleted successfully'
+        ], 200);
     }
-    // public function update(Request $request, Project $project)
-    // {
-    //     // Logic to update a project
-    //     $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'description' => 'nullable|string',
-    //         'organization_id' => 'required|exists:organizations,id',
-    //     ]);
-
-    //     $project->update($request->only('name', 'description', 'organization_id'));
-
-    //     return redirect()->route('projects.index')->with('success', 'Project updated successfully.');
-    // }
     // public function destroy(Project $project)
     // {
     //     // Logic to delete a project

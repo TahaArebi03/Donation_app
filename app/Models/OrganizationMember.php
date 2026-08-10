@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class OrganizationUser extends Model
+class OrganizationMember extends Model
 {
-    protected $table = 'organization_users';
+    protected $table = 'organization_members';
 
     protected $fillable = [
         'user_id',
         'organization_id',
+        'status',
         'role',
         'joined_at',
     ];

@@ -2,13 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Organization;
+use App\Models\OrganizationMember;
 use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
+    private function getFollowedOrganizationIds(User $user)
+    {
+        return DB::table('organization_user')
+            ->where('user_id', $user->id)
+            ->pluck('organization_id')
+            ->toArray();
+    }
+
+    private function isOrganizationFollowedByUser(User $user, $organizationId)
+    {
+        return DB::table('organization_user')
+            ->where('user_id', $user->id)
+            ->where('organization_id', $organizationId)
+            ->exists();
+    }
+
     public function show(Request $request)
-{
+    {
         $user = $request->user();
         
         // التحقق من وجود المستخدم
@@ -32,23 +52,172 @@ class OrganizationController extends Controller
             'updated_at' => $organization->updated_at,
         ]);
     }
+
     public function getAllOrganizations(Request $request)
     {
         $user = $request->user();
-        
-        // جلب جميع الجمعيات المقبولة
+        $followedOrgIds = $user ? $this->getFollowedOrganizationIds($user) : [];
         $organizations = Organization::where('status', 'approved')->get();
-        
-        // إضافة حالة العضوية لكل جمعية
-        $organizations->each(function ($org) use ($user) {
-            $org->is_member = $org->members()->where('user_id', $user->id)->exists();
+        $organizations->each(function ($org) use ($user, $followedOrgIds) {
+            // العضوية الإدارية
+            $org->is_member = $user ? $org->members()->where('user_id', $user->id)->exists() : false;
+            
+            // المتابعة
+            $org->is_followed = $user ? in_array($org->id, $followedOrgIds, true) : false;
         });
         
         return response()->json(['organizations' => $organizations]);
     }
     
-    
+    // جلب الجمعيات التي يتابعها المستخدم
+    public function getFollowedOrganizations(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
 
+        $followedOrgIds = $this->getFollowedOrganizationIds($user);
+        $organizations = Organization::whereIn('id', $followedOrgIds)->get();
+        return response()->json(['organizations' => $organizations]);
+    }
 
-    
+    // متابعة جمعية
+    public function followOrganization(Request $request, $organizationId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $organization = Organization::findOrFail($organizationId);
+
+        // منع المتابعة إذا كان المدير نفسه
+        if ($user->id == $organization->owner_id) {
+            return response()->json(['error' => 'You cannot follow your own organization'], 400);
+        }
+
+        // التحقق من عدم التكرار
+        if ($this->isOrganizationFollowedByUser($user, $organizationId)) {
+            return response()->json(['error' => 'Already following'], 400);
+        }
+
+        DB::table('organization_user')->insert([
+            'user_id' => $user->id,
+            'organization_id' => $organizationId,
+            'followed_at' => now(),
+        ]);
+        return response()->json(['message' => 'Followed successfully']);
+    }
+
+    // إلغاء متابعة جمعية
+    public function unfollowOrganization(Request $request, $organizationId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        DB::table('organization_user')
+            ->where('user_id', $user->id)
+            ->where('organization_id', $organizationId)
+            ->delete();
+
+        return response()->json(['message' => 'Unfollowed successfully']);
+    }
+
+    public function approveVolunteer(Request $request, $organizationId, $userId)
+    {
+        $authUser = $request->user();
+        if (!$authUser) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $organization = Organization::findOrFail($organizationId);
+
+        // فقط المالك أو الأدمن يمكنه الموافقة
+        if ($authUser->id !== $organization->owner_id && !$authUser->isAdmin()) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $member = $organization->members()->where('user_id', $userId)->first();
+        if (!$member) {
+            return response()->json(['error' => 'Member request not found'], 404);
+        }
+
+        $organization->members()->updateExistingPivot($userId, [
+            'status' => 'active',
+            'joined_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Volunteer approved']);
+    }
+
+    public function rejectVolunteer(Request $request, $organizationId, $userId)
+    {
+        $authUser = $request->user();
+        if (!$authUser) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $organization = Organization::findOrFail($organizationId);
+
+        // فقط المالك أو الأدمن يمكنه الرفض
+        if ($authUser->id !== $organization->owner_id && !$authUser->isAdmin()) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $member = $organization->members()->where('user_id', $userId)->first();
+        if (!$member) {
+            return response()->json(['error' => 'Member request not found'], 404);
+        }
+
+        $organization->members()->updateExistingPivot($userId, [
+            'status' => 'rejected',
+        ]);
+
+        return response()->json(['message' => 'Volunteer rejected']);
+    }
+
+    public function getOrganizationDetails($organizationId)
+    {
+        $organization = Organization::with('owner')->findOrFail($organizationId);
+        $user = Auth::user();
+
+        $isFollowed = $user ? $this->isOrganizationFollowedByUser($user, $organizationId) : false;
+
+        $volunteerStatus = 'none';
+        $isMember = false;
+        if ($user) {
+            $member = $organization->members()->where('user_id', $user->id)->first();
+            if ($member) {
+                $status = $member->pivot->status;
+                if ($status === 'active') {
+                    $isMember = true;
+                    $volunteerStatus = 'approved';
+                } else {
+                    $volunteerStatus = $status; // pending, rejected
+                }
+            }
+        }
+
+        return response()->json([
+            'id' => $organization->id,
+            'name' => $organization->name,
+            'description' => $organization->description,
+            'type' => $organization->type,
+            'status' => $organization->status,
+            'owner' => [
+                'id' => optional($organization->owner)->id,
+                'firstName' => optional($organization->owner)->firstName,
+                'lastName' => optional($organization->owner)->lastName,
+                'email' => optional($organization->owner)->email,
+            ],
+            'is_followed' => $isFollowed,
+            'is_member' => $isMember,
+            'volunteer_status' => $volunteerStatus,
+            'has_requested_volunteer' => ($volunteerStatus == 'pending'),
+        ]);
+    }
 }
+    

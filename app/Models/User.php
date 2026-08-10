@@ -2,6 +2,11 @@
 
 namespace App\Models;
 
+/**
+ * @method \Illuminate\Database\Eloquent\Relations\BelongsToMany followedOrganizations()
+ * @method \Illuminate\Database\Eloquent\Relations\BelongsToMany organizations()
+ * @method \Illuminate\Database\Eloquent\Relations\HasOne organization()
+ */
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -74,11 +79,11 @@ class User extends Authenticatable
     }
 
 
-    // المنظمات التي انضم إليها كعضو (عبر الجدول الوسيط organization_users)
+    // المنظمات التي انضم إليها كعضو (عبر الجدول الوسيط organization_members)
     public function organizations()
     {
-        return $this->belongsToMany(Organization::class, 'organization_users')
-                    ->withPivot('role', 'joined_at')
+        return $this->belongsToMany(Organization::class, 'organization_members')
+                    ->withPivot('role', 'joined_at', 'status')
                     ->withTimestamps();
     }
 
@@ -87,6 +92,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(Admin::class);
     }
+
+    // الجمعيات التي يتابعها المستخدم
+    public function followedOrganizations()
+{
+    return $this->belongsToMany(Organization::class, 'user_organization_follows')
+                ->withPivot('followed_at')
+                ->withTimestamps();
+}
 
     public function profile()
     {

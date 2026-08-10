@@ -12,12 +12,12 @@ class ProfileController extends Controller
         $profile=Profile::where('user_id',$id);
         
     }
-    public function store(StoreProfileRequest $request){
-        $profile=Profile::create($request->validated());
-        // $profile['user_id']=$id;
-        return response()->json([
-            'message'=>'create profile succssfuly',
-            'profile'=>$profile,
-        ]);
-    }
+    // public function store(StoreProfileRequest $request){
+    //     $profile=Profile::create($request->validated());
+    //     // $profile['user_id']=$id;
+    //     return response()->json([
+    //         'message'=>'create profile succssfuly',
+    //         'profile'=>$profile,
+    //     ]);
+    // }
 }

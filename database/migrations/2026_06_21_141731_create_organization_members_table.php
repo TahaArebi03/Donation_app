@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organization_users', function (Blueprint $table) {
+        Schema::create('organization_members', function (Blueprint $table) {
              $table->id();
             
             // المستخدم المضاف
@@ -19,7 +19,8 @@ return new class extends Migration
             
             // المنظمة التي سينتمي لها
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
-            
+            // حالة العضوية (معلق، مقبول، مرفوض)
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             // دوره داخل هذه المنظمة (عضو عادي أو مشرف)
             $table->enum('role', ['عضو', 'مشرف',"مدير مالي"])->default('عضو');
             
@@ -38,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('organization_users');
+        Schema::dropIfExists('organization_members');
     }
 };

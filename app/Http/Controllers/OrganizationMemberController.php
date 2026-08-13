@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
+use App\Models\OrganizationInvitation;
+use App\Models\OrganizationJoinRequest;
 use App\Models\User;
 use App\Models\OrganizationMember;
 
@@ -12,7 +14,7 @@ class OrganizationMemberController extends Controller
 {
     
 
-    public function addMember(Request $request)
+    public function inviteMember(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -20,11 +22,12 @@ class OrganizationMemberController extends Controller
         ]);
 
         $user = $request->user();
-        $organization = $user->organization; // استنتاج الجمعية من المستخدم
+        $organization = $user->organization;
 
         if (!$organization) {
             return response()->json(['error' => 'User does not own any organization'], 403);
         }
+
         $allowedRoles = ['member', 'admin', 'finance_manager'];
         if (!in_array($request->role, $allowedRoles)) {
             return response()->json(['error' => 'دور غير صالح'], 400);
@@ -32,27 +35,35 @@ class OrganizationMemberController extends Controller
 
         $newMember = User::findOrFail($request->user_id);
 
-        // تحقق من أن العضو ليس موجوداً بالفعل
-        if ($organization->members()->where('user_id', $newMember->id)->exists()) {
-            return response()->json(['error' => 'User is already a member'], 400);
-        }
-
-        // تحقق من أن المستخدم ليس المالك نفسه
         if ($newMember->id == $organization->owner_id) {
             return response()->json(['error' => 'Cannot add the owner as a member'], 400);
         }
 
-        // إضافة العضو
-        $organization->members()->attach($newMember->id, [
-            'role' => $request->role,
-            'status' => 'approved',
-            'joined_at' => now(),
-        ]);
+        $existingMember = $organization->members()->where('user_id', $newMember->id)->first();
+        if ($existingMember) {
+            return response()->json(['error' => 'User is already a member'], 400);
+        }
+
+        $invitation = OrganizationInvitation::firstOrCreate(
+            [
+                'organization_id' => $organization->id,
+                'user_id' => $newMember->id,
+                'status' => 'pending',
+            ],
+            [
+                'role' => $request->role,
+                'status' => 'pending',
+            ]
+        );
+
+        if ($invitation->wasRecentlyCreated) {
+            $invitation->update(['status' => 'pending']);
+        }
 
         return response()->json([
-    'message' => 'تمت الإضافة بنجاح',
-    'member' => $newMember, // أو بيانات العضو مع دوره
-]);
+            'message' => 'تم إرسال الدعوة بنجاح',
+            'invitation' => $invitation,
+        ]);
     }
     public function removeMember(Request $request)
     {
@@ -178,27 +189,155 @@ public function volunteerRequest(Request $request, $organizationId)
     $user = $request->user();
     $organization = Organization::findOrFail($organizationId);
 
-    // تحقق من أنه ليس عضواً فعالاً بالفعل
-    $existing = $organization->members()->where('user_id', $user->id)->first();
-    if ($existing && $existing->pivot->status == 'active') {
+    $existingMember = $organization->members()->where('user_id', $user->id)->first();
+    if ($existingMember) {
         return response()->json(['error' => 'Already a member'], 400);
     }
 
-    // إذا كان هناك طلب pending مسبقاً
-    if ($existing && $existing->pivot->status == 'pending') {
+    $existingRequest = OrganizationJoinRequest::where('organization_id', $organization->id)
+        ->where('user_id', $user->id)
+        ->where('status', 'pending')
+        ->first();
+
+    if ($existingRequest) {
         return response()->json(['error' => 'Request already pending'], 400);
     }
 
-    // إضافة أو تحديث الطلب
-    $organization->members()->syncWithoutDetaching([
-        $user->id => [
-            'role' => 'عضو',
-            'status' => 'pending',
-            'joined_at' => now(),
-        ]
+    $requestRecord = OrganizationJoinRequest::create([
+        'organization_id' => $organization->id,
+        'user_id' => $user->id,
+        'status' => 'pending',
     ]);
 
-    return response()->json(['message' => 'Volunteer request sent successfully']);
+    return response()->json(['message' => 'Volunteer request sent successfully', 'request' => $requestRecord]);
+}
+public function removeInvitation(Request $request)
+{
+    $request->validate([
+        'invitation_id' => 'required|exists:organization_invitations,id',
+    ]);
+
+    $user = $request->user();
+    $organization = $user->organization;
+
+    if (!$organization) {
+        return response()->json(['error' => 'User does not own any organization'], 403);
+    }
+
+    $invitation = OrganizationInvitation::findOrFail($request->invitation_id);
+
+    if ($invitation->organization_id !== $organization->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    if ($invitation->status !== 'pending') {
+        return response()->json(['error' => 'Cannot remove a responded invitation'], 400);
+    }
+
+    $invitation->delete();
+
+    return response()->json(['message' => 'Invitation removed successfully']);
+}
+public function respondToInvitation(Request $request, $invitationId)
+{
+    $request->validate([
+        'action' => 'required|in:accept,reject',
+    ]);
+
+    $invitation = OrganizationInvitation::findOrFail($invitationId);
+    $user = $request->user();
+
+    if ($invitation->user_id !== $user->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    if ($invitation->status !== 'pending') {
+        return response()->json(['error' => 'Invitation already responded'], 400);
+    }
+
+    $invitation->status = $request->action === 'accept' ? 'accepted' : 'rejected';
+    $invitation->responded_at = now();
+    $invitation->save();
+
+    if ($request->action === 'accept') {
+        $organization = $invitation->organization;
+        $organization->members()->syncWithoutDetaching([
+            $user->id => [
+                'role' => $invitation->role,
+                'status' => 'approved',
+                'joined_at' => now(),
+            ]
+        ]);
+    }
+
+    return response()->json(['message' => 'Invitation updated successfully', 'invitation' => $invitation]);
+}
+
+public function respondToJoinRequest(Request $request, $joinRequestId)
+{
+    $request->validate([
+        'action' => 'required|in:accept,reject',
+    ]);
+
+    $joinRequest = OrganizationJoinRequest::findOrFail($joinRequestId);
+    $user = $request->user();
+    $organization = $joinRequest->organization;
+
+    if ($organization->owner_id !== $user->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    if ($joinRequest->status !== 'pending') {
+        return response()->json(['error' => 'Join request already responded'], 400);
+    }
+
+    $joinRequest->status = $request->action === 'accept' ? 'accepted' : 'rejected';
+    $joinRequest->responded_at = now();
+    $joinRequest->save();
+
+    if ($request->action === 'accept') {
+        $organization->members()->syncWithoutDetaching([
+            $joinRequest->user_id => [
+                'role' => 'member',
+                'status' => 'approved',
+                'joined_at' => now(),
+            ]
+        ]);
+    }
+
+    return response()->json(['message' => 'Join request updated successfully', 'request' => $joinRequest]);
+}
+
+public function listInvitations(Request $request)
+{
+    $user = $request->user();
+    $organization = $user->organization;
+
+    if (!$organization) {
+        return response()->json(['error' => 'User does not own any organization'], 403);
+    }
+
+    // جلب جميع الدعوات المرسلة من قبل الجمعية
+    $invitations = OrganizationInvitation::where('organization_id', $organization->id)
+        ->with(['user:id,firstName,lastName,email'])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($invitation) {
+            return [
+                'id' => $invitation->id,
+                'user' => $invitation->user,
+                'role' => $invitation->role,
+                'status' => $invitation->status,
+                'sent_at' => $invitation->created_at,
+                'responded_at' => $invitation->responded_at,
+            ];
+        });
+
+    return response()->json([
+        'message' => 'تم جلب الدعوات بنجاح',
+        'invitations' => $invitations,
+        'total' => $invitations->count(),
+    ]);
 }
 
 }

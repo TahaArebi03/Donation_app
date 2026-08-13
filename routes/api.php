@@ -44,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/organizations/{id}/volunteer-request', [OrganizationMemberController::class, 'volunteerRequest'])
         ->middleware('auth:sanctum');
+    Route::post('/invitations/{invitation}/respond', [OrganizationMemberController::class, 'respondToInvitation']);
+    Route::post('/join-requests/{joinRequest}/respond', [OrganizationMemberController::class, 'respondToJoinRequest']);
 
     // --- معلومات الجمعية (للمدير فقط) ---
     Route::get('/organization/show', [OrganizationController::class, 'show']);
@@ -58,7 +60,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/member/list_organizations_for_member', [OrganizationMemberController::class, 'listOrganizationForMember']);
     Route::post('/member/remove', [OrganizationMemberController::class, 'removeMember']);
     Route::post('/member/update-role', [OrganizationMemberController::class, 'updateMemberRole']);
-
+    Route::post('/member/invite', [OrganizationMemberController::class, 'inviteMember']);
+    Route::get('/member/invitations', [OrganizationMemberController::class, 'listInvitations']);
+    Route::post('/member/remove-invitation', [OrganizationMemberController::class, 'removeInvitation']);
     // --- إنشاء مشاريع (للمدير فقط) ---
     Route::post('project/create', [ProjectController::class, 'create']);
     Route::put('project/{id}/update', [ProjectController::class, 'update']);

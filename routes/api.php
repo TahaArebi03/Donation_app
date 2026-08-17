@@ -8,6 +8,8 @@ use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\RecurringDonationController;
+use App\Http\Controllers\JoinRequestController;
+use App\Http\Controllers\InvitationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,11 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [UserController::class, 'logout']);
     Route::get('/test-auth', function (Request $request) { return response()->json(['user' => $request->user()]); });
 
-    Route::post('/organizations/{id}/volunteer-request', [OrganizationMemberController::class, 'volunteerRequest'])
-        ->middleware('auth:sanctum');
-    Route::post('/invitations/{invitation}/respond', [OrganizationMemberController::class, 'respondToInvitation']);
-    Route::post('/join-requests/{joinRequest}/respond', [OrganizationMemberController::class, 'respondToJoinRequest']);
-
+    
     // --- معلومات الجمعية (للمدير فقط) ---
     Route::get('/organization/show', [OrganizationController::class, 'show']);
 
@@ -60,14 +58,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/member/list_organizations_for_member', [OrganizationMemberController::class, 'listOrganizationForMember']);
     Route::post('/member/remove', [OrganizationMemberController::class, 'removeMember']);
     Route::post('/member/update-role', [OrganizationMemberController::class, 'updateMemberRole']);
-    Route::post('/member/invite', [OrganizationMemberController::class, 'inviteMember']);
-    Route::get('/member/invitations', [OrganizationMemberController::class, 'listInvitations']);
-    Route::post('/member/remove-invitation', [OrganizationMemberController::class, 'removeInvitation']);
     // --- إنشاء مشاريع (للمدير فقط) ---
     Route::post('project/create', [ProjectController::class, 'create']);
     Route::put('project/{id}/update', [ProjectController::class, 'update']);
     Route::delete('project/{id}/delete', [ProjectController::class, 'delete']);
-    
+
+    // --- الدعوات (للمدير والمتبرع) ---
+    Route::get('/invitations/myInvitations', [InvitationController::class   , 'getMyInvitations']);
+    Route::get('/invitations/sentInvitations', [InvitationController::class, 'getSentInvitationsForOrganization']);
+    Route::post('/invitations/sendInvitation', [InvitationController::class, 'sendInvitation']);
+    Route::post('/invitations/acceptInvitation', [InvitationController::class, 'accept']);
+    Route::post('/invitations/rejectInvitation', [InvitationController::class, 'reject']);  
+    Route::delete('/invitations/cancelInvitation/{id}', [InvitationController::class, 'cancelInvitation']);
+
+    // --- طلبات الانضمام (للمدير والمتبرع) ---
+    Route::get('/join-requests/myRequests', [JoinRequestController::class, 'getMyJoinRequests']);
+    Route::get('/join-requests/pendingRequests', [JoinRequestController::class, 'pendingRequests']);
+    Route::post('/join-requests/sendRequest', [JoinRequestController::class, 'sendJoinRequest']);
+    Route::post('/join-requests/approveRequest', [JoinRequestController::class, 'approve']);
+    Route::post('/join-requests/rejectRequest', [JoinRequestController::class, 'reject']);
+    Route::post('/join-requests/cancelRequest', [JoinRequestController::class, 'cancelRequest']);
+    Route::get('/join-requests/getRequestStatus/{organizationId}', [JoinRequestController::class, 'getRequestStatus']);
 
     // --- المتابعات (للمستخدم العادي) ---
     Route::get('/user/followed-organizations', [OrganizationController::class, 'getFollowedOrganizations']);

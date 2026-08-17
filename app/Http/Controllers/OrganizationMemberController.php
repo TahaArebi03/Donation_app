@@ -211,67 +211,68 @@ public function volunteerRequest(Request $request, $organizationId)
 
     return response()->json(['message' => 'Volunteer request sent successfully', 'request' => $requestRecord]);
 }
-public function removeInvitation(Request $request)
-{
-    $request->validate([
-        'invitation_id' => 'required|exists:organization_invitations,id',
-    ]);
-
-    $user = $request->user();
-    $organization = $user->organization;
-
-    if (!$organization) {
-        return response()->json(['error' => 'User does not own any organization'], 403);
-    }
-
-    $invitation = OrganizationInvitation::findOrFail($request->invitation_id);
-
-    if ($invitation->organization_id !== $organization->id) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-
-    if ($invitation->status !== 'pending') {
-        return response()->json(['error' => 'Cannot remove a responded invitation'], 400);
-    }
-
-    $invitation->delete();
-
-    return response()->json(['message' => 'Invitation removed successfully']);
-}
-public function respondToInvitation(Request $request, $invitationId)
-{
-    $request->validate([
-        'action' => 'required|in:accept,reject',
-    ]);
-
-    $invitation = OrganizationInvitation::findOrFail($invitationId);
-    $user = $request->user();
-
-    if ($invitation->user_id !== $user->id) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-
-    if ($invitation->status !== 'pending') {
-        return response()->json(['error' => 'Invitation already responded'], 400);
-    }
-
-    $invitation->status = $request->action === 'accept' ? 'accepted' : 'rejected';
-    $invitation->responded_at = now();
-    $invitation->save();
-
-    if ($request->action === 'accept') {
-        $organization = $invitation->organization;
-        $organization->members()->syncWithoutDetaching([
-            $user->id => [
-                'role' => $invitation->role,
-                'status' => 'approved',
-                'joined_at' => now(),
-            ]
+    public function removeInvitation(Request $request)
+    {
+        $request->validate([
+            'invitation_id' => 'required|exists:organization_invitations,id',
         ]);
+
+        $user = $request->user();
+        $organization = $user->organization;
+
+        if (!$organization) {
+            return response()->json(['error' => 'User does not own any organization'], 403);
+        }
+
+        $invitation = OrganizationInvitation::findOrFail($request->invitation_id);
+
+        if ($invitation->organization_id !== $organization->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        if ($invitation->status !== 'pending') {
+            return response()->json(['error' => 'Cannot remove a responded invitation'], 400);
+        }
+
+        $invitation->delete();
+
+        return response()->json(['message' => 'Invitation removed successfully']);
     }
 
-    return response()->json(['message' => 'Invitation updated successfully', 'invitation' => $invitation]);
-}
+    public function respondToInvitation(Request $request, $invitationId)
+    {
+        $request->validate([
+            'action' => 'required|in:accept,reject',
+        ]);
+
+        $invitation = OrganizationInvitation::findOrFail($invitationId);
+        $user = $request->user();
+
+        if ($invitation->user_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        if ($invitation->status !== 'pending') {
+            return response()->json(['error' => 'Invitation already responded'], 400);
+        }
+
+        $invitation->status = $request->action === 'accept' ? 'accepted' : 'rejected';
+        $invitation->responded_at = now();
+        $invitation->save();
+
+        if ($request->action === 'accept') {
+            $organization = $invitation->organization;
+            $organization->members()->syncWithoutDetaching([
+                $user->id => [
+                    'role' => $invitation->role,
+                    'status' => 'approved',
+                    'joined_at' => now(),
+                ]
+            ]);
+        }
+
+        return response()->json(['message' => 'Invitation updated successfully', 'invitation' => $invitation]);
+    }
 
 public function respondToJoinRequest(Request $request, $joinRequestId)
 {

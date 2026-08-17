@@ -64,4 +64,10 @@ class Organization extends Model
     {
         return $this->hasMany(Project::class);
     }
+
+    // الدعوات المرسلة
+    public function invitations()
+    {
+        return $this->hasMany(OrganizationInvitation::class);
+    }
 }

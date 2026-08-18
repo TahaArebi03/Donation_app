@@ -17,7 +17,7 @@ class DonationController extends Controller
     {
         $this->donationService = $donationService;
     }
-    public function create(Request $request){
+    public function donateToProject(Request $request){
         $user = $request->user();
         if(!$user->canDonate()){
             return response()->json([
@@ -57,7 +57,7 @@ class DonationController extends Controller
         
     }
     
-    public function history(Request $request){
+    public function getMyDonations(Request $request){
         $user = $request->user();
         $donations = $user->donations()->with('project')->get();
 

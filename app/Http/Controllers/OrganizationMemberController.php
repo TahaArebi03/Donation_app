@@ -340,5 +340,29 @@ public function listInvitations(Request $request)
         'total' => $invitations->count(),
     ]);
 }
+    public function leaveOrganization(Request $request)
+{
+    $request->validate([
+        'organization_id' => 'required|exists:organizations,id',
+    ]);
+
+    $user = $request->user();
+    $org = Organization::find($request->organization_id);
+
+    // تحقق من أن المستخدم عضو في هذه الجمعية
+    if (!$org->members()->where('user_id', $user->id)->exists()) {
+        return response()->json(['error' => 'أنت لست عضواً في هذه الجمعية'], 400);
+    }
+
+    // تحقق من أنه ليس المالك
+    if ($org->owner_id == $user->id) {
+        return response()->json(['error' => 'لا يمكن للمالك مغادرة جمعيته'], 400);
+    }
+
+    // حذف العضوية
+    $org->members()->detach($user->id);
+
+    return response()->json(['message' => 'تمت مغادرة الجمعية بنجاح']);
+}
 
 }

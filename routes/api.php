@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/member/list_organizations_for_member', [OrganizationMemberController::class, 'listOrganizationForMember']);
     Route::post('/member/remove', [OrganizationMemberController::class, 'removeMember']);
     Route::post('/member/update-role', [OrganizationMemberController::class, 'updateMemberRole']);
+    Route::post('/member/leaveOrganization', [OrganizationMemberController::class, 'leaveOrganization']);
     // --- إنشاء مشاريع (للمدير فقط) ---
     Route::post('project/create', [ProjectController::class, 'create']);
     Route::put('project/{id}/update', [ProjectController::class, 'update']);
@@ -89,10 +90,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/organizations/{id}/join', [OrganizationMemberController::class, 'joinOrganization']);
 
     // --- التبرعات ---
-    Route::post('donate/create', [DonationController::class, 'create']);
-    Route::post('wallet/add-funds', [WalletController::class, 'addFunds']);
+    Route::post('donations/donate', [DonationController::class, 'donateToProject']);
+    Route::get('/donations/myDonations',[DonationController::class,'getMyDonations']);
+    Route::post('wallet/top-up', [WalletController::class, 'topUpWallet']);
     Route::post('wallet/deduct-funds', [WalletController::class, 'deductFunds']);
-    Route::get('wallet/balance', [WalletController::class, 'getBalance']);
+    Route::get('wallet/show', [WalletController::class, 'getWallet']);
     Route::post('recurring-donation/create', [RecurringDonationController::class, 'create']);
 
     // ======================================================================

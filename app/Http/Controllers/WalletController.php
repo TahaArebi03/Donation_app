@@ -23,7 +23,7 @@ class WalletController extends Controller
 
     
     
-    function getBalance(Request $request){
+    function getWallet(Request $request){
         $wallet = Wallet::where('user_id', $request->user()->id)->first();
         if(!$wallet){
             return response()->json([
@@ -31,30 +31,31 @@ class WalletController extends Controller
             ],404);
         }
         return response()->json([
-            'balance'=>$wallet->balance
+            'wallet'=>$wallet->only('id','user_id','balance')
         ]);
     }
-    function addFunds(Request $request){
-        $request->validate([
-            'amount'=>'required|numeric|min:1'
-        ]);
+    public function topUpWallet(Request $request)
+{
+    $request->validate(['amount' => 'required|numeric|min:0.01']);
 
-        $wallet = Wallet::where('user_id', $request->user()->id)->first();
-        if(!$wallet){
-            return response()->json([
-                'message'=>'Wallet not found'
-            ],404);
-        }
-        $wallet->increment('balance', $request->amount);
+    $user = $request->user();
+    $wallet = $user->wallet;
 
-        return response()->json([
-            'message'=>'Funds added successfully',
-            'balance'=>$wallet->balance
-        ]);
+    if (!$wallet) {
+        $wallet = Wallet::create(['user_id' => $user->id, 'balance' => 0]);
     }
+
+    $wallet->balance += $request->amount;
+    $wallet->save();
+
+    return response()->json([
+        'message' => 'تم شحن المحفظة بنجاح',
+        'wallet' => $wallet,
+    ]);
+}
 
     
-    function deductFunds(Request $request){
+    public function deductFunds(Request $request){
         $request->validate([
             'amount'=>'required|numeric|min:1'
         ]);

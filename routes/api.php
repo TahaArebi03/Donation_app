@@ -92,10 +92,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- التبرعات ---
     Route::post('donations/donate', [DonationController::class, 'donateToProject']);
     Route::get('/donations/myDonations',[DonationController::class,'getMyDonations']);
+    
+    Route::post('recurring-donation/create', [RecurringDonationController::class, 'create']);
+
+
     Route::post('wallet/top-up', [WalletController::class, 'topUpWallet']);
     Route::post('wallet/deduct-funds', [WalletController::class, 'deductFunds']);
     Route::get('wallet/show', [WalletController::class, 'getWallet']);
-    Route::post('recurring-donation/create', [RecurringDonationController::class, 'create']);
 
     // ======================================================================
     // 3. مسارات الأدمن

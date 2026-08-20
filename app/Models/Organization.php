@@ -12,7 +12,7 @@ class Organization extends Model
         'type',
         'status',
         'document_path',
-        'owner_id', // مهم جداً
+        'owner_id', 
     ];
 
     // ===== دوال الحالة =====
@@ -57,6 +57,11 @@ class Organization extends Model
         return $this->belongsToMany(User::class, 'organization_members')
                     ->withPivot('role', 'joined_at', 'status')
                     ->withTimestamps();
+    }
+
+    public function approvedMembers()
+    {
+        return $this->members()->wherePivot('status', 'approved');
     }
 
     // المشاريع التابعة للمنظمة

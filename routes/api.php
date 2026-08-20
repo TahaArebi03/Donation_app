@@ -27,7 +27,7 @@ Route::get('project/{id}/show', [ProjectController::class, 'show']); // عرض �
 Route::get('projects/{id}/organization', [ProjectController::class, 'getProjectsForOrganization']);
 
 // --- الجمعيات (للجميع) ---
-Route::get('/organizations/all', [OrganizationController::class, 'getAllOrganizations']);
+Route::get('/organization/all', [OrganizationController::class, 'getAllOrganizations']);
 Route::get('/organizations/{organization}/details', [OrganizationController::class, 'getOrganizationDetails']); // تفاصيل جمعية
 
 // --- أعضاء الجمعية (للجميع) ---
@@ -75,14 +75,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- طلبات الانضمام (للمدير والمتبرع) ---
     Route::get('/join-requests/myRequests', [JoinRequestController::class, 'getMyJoinRequests']);
     Route::get('/join-requests/pendingRequests', [JoinRequestController::class, 'pendingRequests']);
+    Route::get('/join-requests/getRequestStatus/{organizationId}', [JoinRequestController::class, 'getRequestStatus']);
     Route::post('/join-requests/sendRequest', [JoinRequestController::class, 'sendJoinRequest']);
     Route::post('/join-requests/approveRequest', [JoinRequestController::class, 'approve']);
     Route::post('/join-requests/rejectRequest', [JoinRequestController::class, 'reject']);
     Route::post('/join-requests/cancelRequest', [JoinRequestController::class, 'cancelRequest']);
-    Route::get('/join-requests/getRequestStatus/{organizationId}', [JoinRequestController::class, 'getRequestStatus']);
 
     // --- المتابعات (للمستخدم العادي) ---
-    Route::get('/user/followed-organizations', [OrganizationController::class, 'getFollowedOrganizations']);
+    Route::get('/organizations/followed', [OrganizationController::class, 'getFollowedOrganizations']);
     Route::post('/organizations/{id}/follow', [OrganizationController::class, 'followOrganization']);
     Route::post('/organizations/{id}/unfollow', [OrganizationController::class, 'unfollowOrganization']);
 

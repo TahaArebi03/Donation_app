@@ -13,7 +13,7 @@ class OrganizationController extends Controller
 {
     private function getFollowedOrganizationIds(User $user)
     {
-        return DB::table('organization_user')
+        return DB::table('user_organization_follows')
             ->where('user_id', $user->id)
             ->pluck('organization_id')
             ->toArray();
@@ -21,7 +21,7 @@ class OrganizationController extends Controller
 
     private function isOrganizationFollowedByUser(User $user, $organizationId)
     {
-        return DB::table('organization_user')
+        return DB::table('user_organization_follows')
             ->where('user_id', $user->id)
             ->where('organization_id', $organizationId)
             ->exists();
@@ -43,11 +43,20 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'User does not belong to any organization'], 404);
         }
 
+        $organization->loadCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ]);
+
         return response()->json([
             'id' => $organization->id,
             'name' => $organization->name,
             'description' => $organization->description,
             'owner_id' => $organization->owner_id,
+            'members_count' => $organization->members_count,
+            'followers_count' => $organization->followers_count,
+            'projects_count' => $organization->projects_count,
             'created_at' => $organization->created_at,
             'updated_at' => $organization->updated_at,
         ]);
@@ -57,7 +66,11 @@ class OrganizationController extends Controller
     {
         $user = $request->user();
         $followedOrgIds = $user ? $this->getFollowedOrganizationIds($user) : [];
-        $organizations = Organization::where('status', 'approved')->get();
+        $organizations = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->where('status', 'approved')->get();
         $organizations->each(function ($org) use ($user, $followedOrgIds) {
             // العضوية الإدارية
             $org->is_member = $user ? $org->members()->where('user_id', $user->id)->exists() : false;
@@ -78,7 +91,11 @@ class OrganizationController extends Controller
         }
 
         $followedOrgIds = $this->getFollowedOrganizationIds($user);
-        $organizations = Organization::whereIn('id', $followedOrgIds)->get();
+        $organizations = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->whereIn('id', $followedOrgIds)->get();
         return response()->json(['organizations' => $organizations]);
     }
 
@@ -102,12 +119,12 @@ class OrganizationController extends Controller
             return response()->json(['error' => 'Already following'], 400);
         }
 
-        DB::table('organization_user')->insert([
+        $follow=DB::table('user_organization_follows')->insert([
             'user_id' => $user->id,
             'organization_id' => $organizationId,
             'followed_at' => now(),
         ]);
-        return response()->json(['message' => 'Followed successfully']);
+        return response()->json(['message' => 'Followed successfully', 'follow' => $follow]);
     }
 
     // إلغاء متابعة جمعية
@@ -118,7 +135,7 @@ class OrganizationController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        DB::table('organization_user')
+        DB::table('user_organization_follows')
             ->where('user_id', $user->id)
             ->where('organization_id', $organizationId)
             ->delete();
@@ -181,7 +198,11 @@ class OrganizationController extends Controller
 
     public function getOrganizationDetails($organizationId)
     {
-        $organization = Organization::with('owner')->findOrFail($organizationId);
+        $organization = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->with('owner')->findOrFail($organizationId);
         $user = Auth::user();
 
         $isFollowed = $user ? $this->isOrganizationFollowedByUser($user, $organizationId) : false;

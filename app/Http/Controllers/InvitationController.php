@@ -11,11 +11,13 @@ class InvitationController extends Controller
 {
     // المتبرع: جلب دعواتي
     public function getMyInvitations(Request $request)
-    {
-        $user = $request->user();
-        $invitations = $user->invitations()->with('organization')->get();
-        return response()->json(['invitations' => $invitations]);
-    }
+{
+    $user = $request->user();
+    $invitations = $user->invitations()
+                       ->with('organization')
+                       ->get();
+    return response()->json(['invitations' => $invitations]);
+}
 
     // المدير: جلب الدعوات التي أرسلتها جمعيتي
     public function getSentInvitationsForOrganization(Request $request)
@@ -79,6 +81,11 @@ class InvitationController extends Controller
             'status' => 'approved',
             'joined_at' => now(),
         ]);
+        //  تحديث أي طلب انضمام معلق لنفس المستخدم ونفس الجمعية
+        $invitation->organization->joinRequests()
+        ->where('user_id', $user->id)
+        ->where('status', 'pending')
+        ->update(['status' => 'approved']);
 
         return response()->json(['message' => 'تم قبول الدعوة']);
     }

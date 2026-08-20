@@ -75,21 +75,33 @@ class AdminController extends Controller
     }
     public function getOrganizationsApproved()
     {
-        $organizations = Organization::with('owner:id,firstName,lastName,email')->where('status', 'approved')->get(['id','name','description','type','status','owner_id']);
+        $organizations = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->with('owner:id,firstName,lastName,email')->where('status', 'approved')->get(['id','name','description','type','status','owner_id']);
         return response()->json([
             'message'=>'Approved organizations retrieved successfully',
             'organizations'=>$organizations
         ],200);
     }
     public function getOrganizationsRejected(){
-        $organizations = Organization::where('status','rejected')->get(['id','name','description','type','status']);
+        $organizations = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->where('status','rejected')->get(['id','name','description','type','status']);
         return response()->json([
             'message'=>'Rejected organizations retrieved successfully',
             'organizations'=>$organizations
         ],200);
     }
     public function getOrganizationsPending(){
-        $organizations = Organization::where('status','pending')->get(['id','name','description','type','status']);
+        $organizations = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->where('status','pending')->get(['id','name','description','type','status']);
         return response()->json([
             'message'=>'Pending organizations retrieved successfully',
             'organizations'=>$organizations
@@ -106,7 +118,11 @@ class AdminController extends Controller
     {
         // name, description, type, status, owner (id, firstName, lastName, email)
         
-        $organization = Organization::with('owner:id,firstName,lastName,email')->get(['id','name','description','type','status','owner_id'])->findOrFail($id);
+        $organization = Organization::withCount([
+            'approvedMembers as members_count',
+            'followers as followers_count',
+            'projects as projects_count',
+        ])->with('owner:id,firstName,lastName,email')->get(['id','name','description','type','status','owner_id'])->findOrFail($id);
         return response()->json([
             'message'=>'Organization details retrieved successfully',
             'organization'=>$organization

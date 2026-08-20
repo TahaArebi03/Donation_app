@@ -100,7 +100,14 @@ class User extends Authenticatable
                 ->withPivot('followed_at')
                 ->withTimestamps();
 }
-
+    public function joinRequests()
+{
+    return $this->hasMany(OrganizationJoinRequest::class);
+}
+    public function invitations()
+{
+    return $this->hasMany(OrganizationInvitation::class, 'user_id');
+}
     public function profile()
     {
         return $this->hasOne(Profile::class);
